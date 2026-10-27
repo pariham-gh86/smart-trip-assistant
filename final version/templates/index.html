@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#14427a">
+    <title>برنامه ریزی سفر هوشمند</title>
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap');
+
+        :root {
+            --sky-top: #14427a;
+            --sky-mid: #3f86c4;
+            --sky-low: #9cc9e6;
+            --sky-horizon: #f7dcae;
+            --sun: #f2a541;
+            --ink: #12283a;
+            --muted: #567085;
+            --field: #f3f7fa;
+            --line: #cddbe5;
+            --brand: #1d4e89;
+            --danger: #b3261e;
+        }
+
+        * {
+	box-sizing: border-box;
+}
+
+        html { -webkit-text-size-adjust: 100%; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            min-height: 100dvh;
+            direction: rtl;
+            color: var(--ink);
+            font-family: Vazirmatn, "IRANSans", "Segoe UI", Tahoma, sans-serif;
+            background-color: var(--sky-mid);
+        }
+
+        /* ---------- پس‌زمینه: آسمان، خورشید و تپه‌ها ---------- */
+        .scene { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 42%, var(--sky-low) 74%, var(--sky-horizon) 100%); }
+
+        .sun {
+            position: absolute;
+            top: 28px;
+            left: 8%;
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 38%, #fff3c4 0%, #ffd479 45%, var(--sun) 100%);
+            animation: rise 2.2s cubic-bezier(.2, .7, .2, 1) both;
+        }
+
+        .sun::before { content: ""; position: absolute; inset: -70%; border-radius: 50%; background: radial-gradient(circle, rgba(255, 214, 130, 0.55) 0%, rgba(255, 214, 130, 0.22) 38%, rgba(255, 214, 130, 0) 70%); z-index: -1; }
+
+        .cloud {
+            position: absolute;
+            height: 34px;
+            border-radius: 40px;
+            background: radial-gradient(closest-side, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0));
+        }
+        .cloud.c1 { top: 8vh; right: 7%; width: 120px; }
+        .cloud.c2 { top: 40vh; left: 4%; width: 110px; opacity: .7; }
+
+        .hills { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 46vh; min-height: 260px; display: block; }
+
+        @keyframes rise {
+            from { transform: translateY(70px); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+
+        /* ---------- صفحه ---------- */
+        .stage {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 560px;
+            margin: 0 auto;
+            padding: clamp(104px, 16vh, 160px) 16px 56px;
+        }
+
+        .hero { text-align: center; margin-bottom: 24px; color: #fff; text-shadow: 0 2px 14px rgba(8, 30, 60, 0.45); }
+        .hero h1 { margin: 0 0 10px; font-size: clamp(24px, 6.4vw, 38px); line-height: 1.5; font-weight: 800; text-wrap: balance; }
+        /* انیمیشن ورود عنوان: کلمه‌ها یکی‌یکی از پایین بالا می‌آیند، بعد توضیح ظاهر می‌شود */
+        .hero h1 .w {
+            display: inline-block;
+            opacity: 0;
+            transform: translateY(22px);
+            animation: word-in .8s cubic-bezier(.2, .7, .2, 1) forwards;
+            animation-delay: calc(.3s + var(--i) * .16s);
+        }
+        .hero p { opacity: 0; animation: fade-in .9s ease forwards; animation-delay: 1.1s; }
+        @keyframes word-in { to { opacity: 1; transform: translateY(0); } }
+        @keyframes fade-in { to { opacity: 1; } }
+
+        .hero p { margin: 0 auto; max-width: 30em; font-size: clamp(14px, 3.6vw, 16px); line-height: 1.9; text-wrap: balance; }
+
+        .card {
+            background: rgba(255, 255, 255, 0.93);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 24px;
+            padding: 22px 18px 20px;
+            box-shadow: 0 24px 60px rgba(8, 30, 60, 0.38);
+        }
+        /* ورود کادر فرم: بعد از عنوان از پایین بالا می‌آید و فیلدها پشت‌سرهم ظاهر می‌شوند */
+        .card { animation: rise-in .9s cubic-bezier(.2, .7, .2, 1) backwards; animation-delay: .8s; }
+        .reveal { animation: rise-in .6s cubic-bezier(.2, .7, .2, 1) backwards; animation-delay: calc(1.05s + var(--i) * .1s); }
+        @keyframes rise-in { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* خروج نرم هنگام رفتن به صفحه‌ی گفتگو (آسمان و تپه‌ها سر جایشان می‌مانند) */
+        .stage { transition: opacity .28s ease, transform .28s ease; }
+        body.leaving .stage { opacity: 0; transform: translateY(-14px); }
+
+        .field { margin-bottom: 18px; }
+        /* تعداد روز و تعداد نفرات: کنار هم در صفحه‌ی عریض، زیر هم روی موبایل */
+        .pair { display: grid; grid-template-columns: 1fr; column-gap: 14px; }
+        @media (min-width: 560px) { .pair { grid-template-columns: 1fr 1fr; } }
+        .field > label { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; font-size: 14px; font-weight: 700; }
+        .optional { font-weight: 400; font-size: 12px; color: var(--muted); }
+        .hint { margin: 7px 2px 0; font-size: 12px; line-height: 1.7; color: var(--muted); }
+
+        input, textarea {
+            width: 100%;
+            padding: 13px 14px;
+            border: 1.5px solid var(--line);
+            border-radius: 14px;
+            background: var(--field);
+            color: var(--ink);
+            font-family: inherit;
+            font-size: 16px; /* جلوگیری از زوم خودکار در iOS */
+            transition: border-color .15s, box-shadow .15s, background-color .15s;
+        }
+        input::placeholder, textarea::placeholder { color: #8aa0b0; }
+        textarea { min-height: 92px; resize: vertical; line-height: 1.8; }
+        input:focus, textarea:focus { outline: none; border-color: var(--brand); background: #fff; box-shadow: 0 0 0 4px rgba(29, 78, 137, 0.18); }
+
+        /* شمارنده‌ی تعداد روز */
+        .stepper { display: grid; grid-template-columns: 52px 1fr 52px; gap: 8px; direction: ltr; }
+        .stepper input { text-align: center; font-size: 20px; font-weight: 700; -moz-appearance: textfield; appearance: textfield; }
+        .stepper input::-webkit-outer-spin-button, .stepper input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .step-btn {
+            width: 52px; height: 52px; padding: 0;
+            border: 1.5px solid var(--line); border-radius: 14px;
+            background: #fff; color: var(--brand);
+            font-family: inherit; font-size: 26px; line-height: 1; font-weight: 700;
+            cursor: pointer; touch-action: manipulation;
+            transition: background-color .15s, border-color .15s, transform .1s;
+        }
+        .step-btn:hover { background: #e8f0fa; border-color: #a9c0d8; }
+        .step-btn:active { transform: scale(.94); }
+        .step-btn:focus-visible, .submit:focus-visible, .resume a:focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; }
+
+        .submit {
+            width: 100%; padding: 15px 16px; margin-top: 4px;
+            border: none; border-radius: 14px;
+            background: var(--sun); color: #2a1b00;
+            font-family: inherit; font-size: 17px; font-weight: 800;
+            cursor: pointer; touch-action: manipulation;
+            box-shadow: 0 8px 20px rgba(242, 165, 65, 0.45);
+            transition: background-color .15s, transform .1s, box-shadow .15s;
+        }
+        .submit:hover { background: #f5b25c; }
+        .submit:active { transform: translateY(1px); box-shadow: 0 4px 12px rgba(242, 165, 65, 0.45); }
+        .submit:disabled { background: #e5cfa8; color: #6f5b34; box-shadow: none; cursor: not-allowed; }
+
+        .loading { display: none; align-items: center; justify-content: center; gap: 10px; margin-top: 16px; color: var(--muted); font-size: 14px; line-height: 1.7; text-align: center; }
+        .loading.on { display: flex; }
+        .spinner { flex: 0 0 auto; width: 18px; height: 18px; border: 3px solid #cfdce8; border-top-color: var(--brand); border-radius: 50%; animation: spin .9s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .resume { display: none; margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); text-align: center; font-size: 14px; }
+        .resume.on { display: block; }
+        .resume a { color: var(--brand); font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
+
+        /* ---------- صفحه‌ی بزرگ (کامپیوتر) ---------- */
+        @media (min-width: 720px) {
+            .sun { top: 9vh; left: 11%; width: 150px; height: 150px; }
+            .cloud.c1 { top: 18vh; right: 12%; width: 220px; height: 44px; }
+            .cloud.c2 { top: 40vh; left: 18%; width: 170px; height: 40px; }
+            .stage { padding-top: clamp(120px, 18vh, 190px); padding-bottom: 80px; }
+            .hero { margin-bottom: 30px; }
+            .card { padding: 32px 32px 28px; border-radius: 28px; }
+            .field > label { font-size: 15px; }
+        }
+
+        @media (min-height: 900px) and (min-width: 720px) {
+            .stage { padding-top: 21vh; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .sun { animation: none; }
+            .hero h1 .w, .hero p { animation: none; opacity: 1; transform: none; }
+            .card, .reveal { animation: none; }
+            .spinner { animation-duration: 2.4s; }
+            * { transition: none !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="scene" aria-hidden="true">
+    <div class="sun"></div>
+    <div class="cloud c1"></div>
+    <div class="cloud c2"></div>
+    <svg class="hills" viewBox="0 0 1440 400" preserveAspectRatio="xMidYMax slice">
+        <path fill="#8fc2c4" d="M0 220 C140 150 260 150 400 205 C540 260 640 120 800 140 C960 160 1080 250 1220 200 C1320 165 1390 150 1440 160 V400 H0 Z"/>
+        <path fill="#4a9496" d="M0 270 C120 220 250 215 380 255 C520 297 640 205 790 225 C940 245 1050 300 1190 262 C1300 232 1380 225 1440 235 V400 H0 Z"/>
+        <path fill="#27666d" d="M0 320 C160 285 270 280 420 310 C570 340 680 270 840 285 C990 300 1100 345 1240 320 C1330 304 1395 296 1440 300 V400 H0 Z"/>
+        <path fill="#14424d" d="M0 365 C170 345 300 342 450 360 C600 378 720 335 880 345 C1030 355 1150 385 1290 368 C1360 360 1410 352 1440 354 V400 H0 Z"/>
+    </svg>
+</div>
+
+<main class="stage">
+    <header class="hero">
+        <h1><span class="w" style="--i:0">برنامه</span> <span class="w" style="--i:1">ریزی</span> <span class="w" style="--i:2">سفر</span> <span class="w" style="--i:3">هوشمند</span></h1>
+        <p>پیش‌بینی هوای هر روز سفر را می‌گیریم و بر اساس آن برنامه‌ی روزانه و فهرست لباس و وسایل را برایت می‌نویسیم.</p>
+    </header>
+
+    <section class="card">
+        <div class="field reveal" style="--i:0">
+            <label for="city">شهر مقصد</label>
+            <input type="text" id="city" value="Tehran" dir="ltr" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Isfahan">
+            <p class="hint">نام شهر را به انگلیسی بنویس، مثلاً Isfahan یا Shiraz.</p>
+        </div>
+
+        <div class="pair reveal" style="--i:1">
+            <div class="field">
+                <label for="days">تعداد روزهای سفر</label>
+                <div class="stepper">
+                    <button type="button" class="step-btn" onclick="stepValue('days', -1, 1, 14)" aria-label="یک روز کمتر">−</button>
+                    <input type="number" id="days" value="1" min="1" max="14" inputmode="numeric">
+                    <button type="button" class="step-btn" onclick="stepValue('days', 1, 1, 14)" aria-label="یک روز بیشتر">+</button>
+                </div>
+                <p class="hint">تا ۱۴ روز. پیش‌بینی دقیق هوا برای ۵ روز اول است و بقیه روز ها پیش بینی می شود.</p>
+            </div>
+
+            <div class="field">
+                <label for="people">تعداد نفرات</label>
+                <div class="stepper">
+                    <button type="button" class="step-btn" onclick="stepValue('people', -1, 1, 20)" aria-label="یک نفر کمتر">−</button>
+                    <input type="number" id="people" value="1" min="1" max="20" inputmode="numeric">
+                    <button type="button" class="step-btn" onclick="stepValue('people', 1, 1, 20)" aria-label="یک نفر بیشتر">+</button>
+                </div>
+                <p class="hint">تعداد کل مسافران، با خودت. تا ۲۰ نفر.</p>
+            </div>
+        </div>
+
+        <div class="field reveal" style="--i:2">
+            <label for="description">توضیحات اضافه <span class="optional">(اختیاری)</span></label>
+            <textarea id="description" placeholder="مثلاً: با دو فرزند سفر می‌کنم، بودجه کم است، به موزه و غذاهای محلی علاقه دارم..."></textarea>
+        </div>
+
+        <button type="button" class="submit reveal" style="--i:3" id="submit-btn" onclick="getPlan()">دریافت برنامه سفر</button>
+
+        <div class="loading" id="loading" role="status" aria-live="polite">
+            <span class="spinner" aria-hidden="true"></span>
+            <span>در حال گرفتن پیش‌بینی هوا و نوشتن برنامه...</span>
+        </div>
+
+        <div class="resume" id="resume">
+            <a href="/chat">ادامه‌ی گفتگوی قبلی (<span id="resume-city"></span>)</a>
+        </div>
+    </section>
+</main>
+
+<script>
+const STORAGE_KEY = 'trip_chat_v1';
+let navigating = false;
+
+// رفتن به صفحه‌ی دیگر با خروج نرم (اگر کاربر «کاهش حرکت» را روشن کرده باشد، فوری می‌رود)
+function goTo(url) {
+    navigating = true;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        window.location.href = url;
+        return;
+    }
+    document.body.classList.add('leaving');
+    setTimeout(function () { window.location.href = url; }, 280);
+}
+
+// اگر با دکمه‌ی برگشت مرورگر به این صفحه برگردیم، حالت خروج پاک می‌شود
+window.addEventListener('pageshow', function (e) {
+    if (e.persisted) {
+        navigating = false;
+        document.body.classList.remove('leaving');
+    }
+});
+
+function stepValue(id, delta, min, max) {
+    const el = document.getElementById(id);
+    const current = parseInt(el.value, 10) || min;
+    el.value = Math.min(max, Math.max(min, current + delta));
+}
+
+async function getPlan() {
+    const city = document.getElementById('city').value.trim();
+    const days = parseInt(document.getElementById('days').value, 10);
+    const people = parseInt(document.getElementById('people').value, 10);
+    const description = document.getElementById('description').value.trim();
+
+    if (!city) {
+        alert('لطفاً نام شهر را وارد کنید.');
+        return;
+    }
+
+    if (!days || days < 1 || days > 14) {
+        alert('تعداد روزها باید بین ۱ تا ۱۴ باشد.');
+        return;
+    }
+
+    if (!people || people < 1 || people > 20) {
+        alert('تعداد نفرات باید بین ۱ تا ۲۰ باشد.');
+        return;
+    }
+
+    const btn = document.getElementById('submit-btn');
+    const loading = document.getElementById('loading');
+    btn.disabled = true;
+    loading.classList.add('on');
+
+    try {
+        const response = await fetch('/get_plan', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ city, days, people, description })
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (response.ok) {
+            // نتیجه ذخیره می‌شود و صفحه‌ی گفتگو آن را نمایش می‌دهد
+            const state = {
+                city: data.city,
+                days: data.days,
+                people: data.people,
+                temp: data.temp,
+                desc: data.desc,
+                forecast: data.forecast || [],
+                forecast_note: data.forecast_note || '',
+                history: data.history
+            };
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            } catch (e) {
+                alert('مرورگر اجازه‌ی ذخیره‌سازی نمی‌دهد (حالت خصوصی؟). گفتگو نمی‌تواند باز شود.');
+                return;
+            }
+            goTo('/chat');
+            return;
+        }
+
+        alert(data.error || 'خطای ناشناخته از سرور.');
+    } catch (err) {
+        alert('خطا در ارتباط با سرور.');
+    } finally {
+        // هنگام رفتن به صفحه‌ی گفتگو، دکمه تا پایان خروج غیرفعال می‌ماند
+        if (!navigating) {
+            btn.disabled = false;
+            loading.classList.remove('on');
+        }
+    }
+}
+
+// Enter در کادر شهر هم درخواست را ارسال می‌کند
+document.getElementById('city').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter' && !e.isComposing) {
+        e.preventDefault();
+        getPlan();
+    }
+});
+
+// لینک «ادامه‌ی گفتگو» هم با خروج نرم باز می‌شود
+document.querySelector('#resume a').addEventListener('click', function (e) {
+    e.preventDefault();
+    goTo('/chat');
+});
+
+// اگر گفتگوی قبلی ذخیره شده باشد، لینک ادامه‌ی آن نمایش داده می‌شود
+try {
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (saved && Array.isArray(saved.history) && saved.history.length >= 2) {
+        document.getElementById('resume-city').textContent = saved.city || '';
+        document.getElementById('resume').classList.add('on');
+    }
+} catch (e) {}
+</script>
+
+</body>
+</html>

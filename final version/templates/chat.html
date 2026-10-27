@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#14427a">
+    <title>گفتگوی برنامه سفر</title>
+    <style>
+     @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap');
+
+
+        :root {
+            --sky-top: #14427a;
+            --sky-mid: #3f86c4;
+            --sky-low: #9cc9e6;
+            --sky-horizon: #f7dcae;
+            --sun: #f2a541;
+            --ink: #12283a;
+            --muted: #567085;
+            --field: #f3f7fa;
+            --line: #cddbe5;
+            --brand: #1d4e89;
+            --danger: #b3261e;
+        }
+
+        * {
+	box-sizing: border-box;
+}
+        html { -webkit-text-size-adjust: 100%; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            min-height: 100dvh;
+            direction: rtl;
+            color: var(--ink);
+            font-family: Vazirmatn, "IRANSans", "Segoe UI", Tahoma, sans-serif;
+            background-color: var(--sky-mid);
+        }
+
+        /* ---------- پس‌زمینه (همان صحنه‌ی صفحه‌ی اول) ---------- */
+        .scene { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; background: linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 42%, var(--sky-low) 74%, var(--sky-horizon) 100%); }
+        /* اندازه و جای خورشید، ابرها و تپه‌ها دقیقاً مثل صفحه‌ی اول است تا هنگام جابه‌جایی صفحه‌ها نپرد؛
+           خورشید اینجا دوباره بالا نمی‌آید چون از صفحه‌ی اول با همین حالت آمده‌ایم */
+        .sun {
+            display: none; /* روی موبایل پشت کارت‌ها گم می‌شد؛ فقط در صفحه‌ی بزرگ نمایش داده می‌شود */
+            position: absolute; top: 28px; left: 8%;
+            width: 64px; height: 64px; border-radius: 50%;
+            background: radial-gradient(circle at 40% 38%, #fff3c4 0%, #ffd479 45%, var(--sun) 100%);
+        }
+        .sun::before { content: ""; position: absolute; inset: -70%; border-radius: 50%; background: radial-gradient(circle, rgba(255, 214, 130, 0.55) 0%, rgba(255, 214, 130, 0.22) 38%, rgba(255, 214, 130, 0) 70%); z-index: -1; }
+        .cloud { position: absolute; height: 34px; border-radius: 40px; background: radial-gradient(closest-side, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0)); }
+        .cloud.c1 { top: 8vh; right: 7%; width: 120px; }
+        .cloud.c2 { top: 40vh; left: 4%; width: 110px; opacity: .7; }
+        .hills { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; height: 46vh; min-height: 260px; display: block; }
+
+        /* ---------- انیمیشن ورود ---------- */
+        @keyframes rise-in { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes drop-in { from { opacity: 0; transform: translateY(-18px); } to { opacity: 1; transform: translateY(0); } }
+        .topbar { animation: drop-in .5s cubic-bezier(.2, .7, .2, 1) backwards; }
+        .weather-card { animation: rise-in .6s cubic-bezier(.2, .7, .2, 1) backwards; animation-delay: .12s; }
+        .day { animation: rise-in .5s cubic-bezier(.2, .7, .2, 1) backwards; animation-delay: calc(.3s + var(--i, 0) * .06s); }
+        .msg { animation: rise-in .5s cubic-bezier(.2, .7, .2, 1) backwards; animation-delay: var(--d, 0s); }
+        .composer { animation: rise-in .55s cubic-bezier(.2, .7, .2, 1) backwards; animation-delay: .25s; }
+
+        /* خروج نرم هنگام برگشتن به صفحه‌ی اول */
+        .page { transition: opacity .28s ease, transform .28s ease; }
+        body.leaving .page { opacity: 0; transform: translateY(-14px); }
+
+        /* ---------- چارچوب صفحه ---------- */
+        .page { position: relative; z-index: 1; width: 100%; max-width: 720px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+
+        .topbar {
+            position: sticky; top: 0; z-index: 10;
+            display: flex; align-items: center; justify-content: space-between; gap: 10px;
+            padding: 12px 16px;
+            background: rgba(20, 66, 122, 0.94);
+            color: #fff;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .topbar h1 { margin: 0; font-size: 16px; font-weight: 800; line-height: 1.6; }
+        #top-city { unicode-bidi: isolate; }
+        .new-btn {
+            flex: 0 0 auto; padding: 8px 14px;
+            background: rgba(255, 255, 255, 0.16); color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.55); border-radius: 12px;
+            font-family: inherit; font-size: 13px; font-weight: 700; cursor: pointer; touch-action: manipulation;
+            transition: background-color .15s;
+        }
+        .new-btn:hover { background: rgba(255, 255, 255, 0.3); }
+
+        .content { flex: 1; padding: 16px 14px 20px; }
+
+        /* ---------- کارت هواشناسی ---------- */
+        .weather-card {
+            margin-bottom: 18px; padding: 14px 14px 12px;
+            background: rgba(255, 255, 255, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.7);
+            border-radius: 20px;
+            box-shadow: 0 14px 36px rgba(8, 30, 60, 0.3);
+        }
+        .weather-card h3 { margin: 0 2px 10px; font-size: 14px; font-weight: 800; color: var(--ink); }
+        #w-city { unicode-bidi: isolate; }
+        .days { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scroll-snap-type: x proximity; }
+        .day {
+            flex: 0 0 auto; min-width: 112px; scroll-snap-align: start;
+            padding: 10px 8px; border-radius: 14px;
+            background: #eaf2fa; border: 1px solid #d5e4f2;
+            font-size: 12px; text-align: center; line-height: 1.75; color: var(--ink);
+        }
+        .day .wd { font-weight: 800; font-size: 13px; color: var(--brand); }
+        .day .date { color: var(--muted); font-size: 11px; }
+        .day .icon { font-size: 26px; line-height: 1.5; }
+        .note { margin-top: 10px; padding: 9px 12px; background: #fff6dd; border: 1px solid #f0d58a; color: #6b5200; border-radius: 12px; font-size: 12px; line-height: 1.8; }
+
+        /* ---------- پیام‌ها ---------- */
+        #messages { display: flex; flex-direction: column; }
+        .msg { max-width: 90%; padding: 11px 14px; margin-bottom: 12px; border-radius: 18px; font-size: 15px; line-height: 1.9; overflow-wrap: anywhere; scroll-margin-top: 76px; }
+        /* در حالت راست‌به‌چپ، flex-start یعنی سمت راست */
+        .msg.user { align-self: flex-start; background: var(--brand); color: #fff; border-bottom-right-radius: 5px; white-space: pre-wrap; box-shadow: 0 8px 20px rgba(8, 30, 60, 0.3); }
+        .msg.model { align-self: stretch; max-width: 100%; background: rgba(255, 255, 255, 0.96); color: var(--ink); border: 1px solid rgba(255, 255, 255, 0.8); border-bottom-left-radius: 5px; box-shadow: 0 10px 28px rgba(8, 30, 60, 0.28); }
+        .msg.error { align-self: center; max-width: 100%; background: #fdecea; color: var(--danger); border: 1px solid #f5c2be; font-size: 13px; line-height: 1.8; }
+        .msg.typing { align-self: flex-end; display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.96); color: var(--muted); font-size: 13px; box-shadow: 0 8px 20px rgba(8, 30, 60, 0.22); }
+        .msg.typing::before { content: ""; flex: 0 0 auto; width: 16px; height: 16px; border: 3px solid #cfdce8; border-top-color: var(--brand); border-radius: 50%; animation: spin .9s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .msg.model p { margin: 0 0 4px; }
+        .msg.model h4 { margin: 16px 0 6px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--brand); font-size: 16px; font-weight: 800; line-height: 1.6; }
+        .msg.model h4:first-child { margin-top: 2px; padding-top: 0; border-top: none; }
+        .msg.model strong { font-weight: 800; }
+        .msg.model ul { margin: 4px 0 10px; padding-inline-start: 22px; }
+        .msg.model li { margin-bottom: 3px; }
+        .msg.model li::marker { color: var(--sun); }
+        .msg.model .gap { height: 6px; }
+
+        /* ---------- نوار ارسال ---------- */
+        .composer {
+            position: sticky; bottom: 0; z-index: 10;
+            padding: 10px 14px calc(12px + env(safe-area-inset-bottom));
+            background: rgba(255, 255, 255, 0.97);
+            border-top: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 -10px 30px rgba(8, 30, 60, 0.2);
+        }
+        .chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 10px; }
+        .chip {
+            flex: 0 0 auto; padding: 7px 13px;
+            background: #fff; color: var(--brand);
+            border: 1.5px solid var(--line); border-radius: 999px;
+            font-family: inherit; font-size: 13px; font-weight: 700; white-space: nowrap; cursor: pointer; touch-action: manipulation;
+            transition: background-color .15s, border-color .15s;
+        }
+        .chip:hover { background: #e8f0fa; border-color: #a9c0d8; }
+
+        .input-row { display: flex; gap: 8px; align-items: flex-end; }
+        textarea {
+            flex: 1; min-width: 0; max-height: 120px; padding: 12px 14px;
+            border: 1.5px solid var(--line); border-radius: 16px; background: var(--field); color: var(--ink);
+            font-family: inherit; font-size: 16px; line-height: 1.7; resize: none;
+            transition: border-color .15s, box-shadow .15s, background-color .15s;
+        }
+        textarea::placeholder { color: #8aa0b0; }
+        textarea:focus { outline: none; border-color: var(--brand); background: #fff; box-shadow: 0 0 0 4px rgba(29, 78, 137, 0.18); }
+        .send-btn {
+            flex: 0 0 auto; height: 50px; padding: 0 22px;
+            background: var(--sun); color: #2a1b00; border: none; border-radius: 16px;
+            font-family: inherit; font-size: 15px; font-weight: 800; cursor: pointer; touch-action: manipulation;
+            box-shadow: 0 6px 16px rgba(242, 165, 65, 0.45);
+            transition: background-color .15s, transform .1s;
+        }
+        .send-btn:hover { background: #f5b25c; }
+        .send-btn:active { transform: translateY(1px); }
+        .send-btn:disabled { background: #e5cfa8; color: #6f5b34; box-shadow: none; cursor: not-allowed; }
+
+        .new-btn:focus-visible, .chip:focus-visible, .send-btn:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+        .new-btn:focus-visible { outline-color: #fff; }
+
+        /* ---------- صفحه‌ی بزرگ (کامپیوتر) ---------- */
+        @media (min-width: 720px) {
+            .sun { display: block; top: 9vh; left: 11%; width: 150px; height: 150px; }
+            .cloud.c1 { top: 18vh; right: 12%; width: 220px; height: 44px; }
+            .cloud.c2 { top: 40vh; left: 18%; width: 170px; height: 40px; }
+            .topbar { margin-top: 18px; border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.25); }
+            .topbar h1 { font-size: 18px; }
+            .content { padding: 22px 0 24px; }
+            .days { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); overflow: visible; }
+            .day { min-width: 0; }
+            .composer { margin-bottom: 18px; border-radius: 22px; border: 1px solid rgba(255, 255, 255, 0.7); }
+            .msg { font-size: 15.5px; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .topbar, .weather-card, .day, .msg, .composer { animation: none; }
+            .msg.typing::before { animation-duration: 2.4s; }
+            * { transition: none !important; scroll-behavior: auto !important; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="scene" aria-hidden="true">
+    <div class="sun"></div>
+    <div class="cloud c1"></div>
+    <div class="cloud c2"></div>
+    <svg class="hills" viewBox="0 0 1440 400" preserveAspectRatio="xMidYMax slice">
+        <path fill="#8fc2c4" d="M0 220 C140 150 260 150 400 205 C540 260 640 120 800 140 C960 160 1080 250 1220 200 C1320 165 1390 150 1440 160 V400 H0 Z"/>
+        <path fill="#4a9496" d="M0 270 C120 220 250 215 380 255 C520 297 640 205 790 225 C940 245 1050 300 1190 262 C1300 232 1380 225 1440 235 V400 H0 Z"/>
+        <path fill="#27666d" d="M0 320 C160 285 270 280 420 310 C570 340 680 270 840 285 C990 300 1100 345 1240 320 C1330 304 1395 296 1440 300 V400 H0 Z"/>
+        <path fill="#14424d" d="M0 365 C170 345 300 342 450 360 C600 378 720 335 880 345 C1030 355 1150 385 1290 368 C1360 360 1410 352 1440 354 V400 H0 Z"/>
+    </svg>
+</div>
+
+<div class="page">
+    <header class="topbar">
+        <h1>برنامه سفر <span id="top-city"></span></h1>
+        <button type="button" class="new-btn" onclick="newPlan()">برنامه جدید</button>
+    </header>
+
+    <main class="content">
+        <section class="weather-card" id="weather-card" style="display:none;">
+            <h3>پیش‌بینی هوا برای <span id="w-city"></span></h3>
+            <div class="days" id="days"></div>
+            <div class="note" id="note" style="display:none;"></div>
+        </section>
+
+        <div id="messages" aria-live="polite"></div>
+    </main>
+
+    <div class="composer">
+        <div class="chips" id="chips">
+            <button type="button" class="chip" data-text="برنامه را ارزان‌تر کن و هزینه‌ها را کم کن.">ارزان‌تر کن</button>
+            <button type="button" class="chip" data-text="غذاهای محلی و رستوران‌های معروف بیشتری پیشنهاد بده.">غذاهای محلی بیشتر</button>
+            <button type="button" class="chip" data-text="مکان‌های سرپوشیده بیشتری به برنامه اضافه کن.">مکان‌های سرپوشیده</button>
+            <button type="button" class="chip" data-text="فهرست لباس و وسایل را کوتاه‌تر و خلاصه‌تر بنویس.">فهرست وسایل کوتاه‌تر</button>
+        </div>
+        <div class="input-row">
+            <textarea id="input" rows="1" placeholder="تغییر یا سؤال خودت را بنویس..." aria-label="پیام"></textarea>
+            <button type="button" class="send-btn" id="send-btn" onclick="sendMessage()">ارسال</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'trip_chat_v1';
+
+let state = null;
+try { state = JSON.parse(localStorage.getItem(STORAGE_KEY)); } catch (e) { state = null; }
+
+const messagesEl = document.getElementById('messages');
+const inputEl = document.getElementById('input');
+const sendBtn = document.getElementById('send-btn');
+let busy = false;
+
+// ---------- نمایش مارک‌داونِ ساده‌ی خروجی Gemini (امن: اول HTML escape می‌شود) ----------
+function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function inlineMd(s) {
+    return s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
+function renderMarkdown(text) {
+    const lines = escapeHtml(text).split('\n');
+    let html = '';
+    let inList = false;
+
+    for (const raw of lines) {
+        const line = raw.trimEnd();
+        let m;
+
+        if ((m = line.match(/^\s*[-*•]\s+(.*)$/))) {
+            if (!inList) { html += '<ul>'; inList = true; }
+            html += '<li>' + inlineMd(m[1]) + '</li>';
+            continue;
+        }
+
+        if (inList) { html += '</ul>'; inList = false; }
+
+        if ((m = line.match(/^#{1,6}\s+(.*)$/))) {
+            html += '<h4>' + inlineMd(m[1]) + '</h4>';
+        } else if (line.trim() === '') {
+            html += '<div class="gap"></div>';
+        } else {
+            html += '<p>' + inlineMd(line) + '</p>';
+        }
+    }
+
+    if (inList) html += '</ul>';
+    return html;
+}
+
+// ---------- حباب‌های پیام ----------
+// delay: تأخیر انیمیشن ورود (ثانیه)؛ برای پیام‌های تازه خالی می‌ماند تا فوری ظاهر شوند
+function addBubble(role, text, delay) {
+    const el = document.createElement('div');
+    el.className = 'msg ' + role;
+    if (delay) el.style.setProperty('--d', delay + 's');
+    if (role === 'model') {
+        el.innerHTML = renderMarkdown(text);
+    } else {
+        el.textContent = text;
+    }
+    messagesEl.appendChild(el);
+    return el;
+}
+
+function addNote(cls, text) {
+    const el = document.createElement('div');
+    el.className = 'msg ' + cls;
+    el.textContent = text;
+    messagesEl.appendChild(el);
+    return el;
+}
+
+function scrollToBottom() {
+    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+}
+
+function scrollToStart(el) {
+    el.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
+
+// ---------- کارت هواشناسی ----------
+function weatherIcon(desc) {
+    if (/رعد|طوفان/.test(desc)) return '⛈️';
+    if (/برف/.test(desc)) return '❄️';
+    if (/باران|بارش|نم‌نم/.test(desc)) return '🌧️';
+    if (/مه|غبار|دود/.test(desc)) return '🌫️';
+    if (/صاف|آفتاب/.test(desc)) return '☀️';
+    if (/ابر/.test(desc)) return '☁️';
+    return '🌤️';
+}
+
+function renderWeather() {
+    const forecast = state.forecast || [];
+    if (!forecast.length) return;
+
+    document.getElementById('w-city').textContent = state.city;
+    const daysEl = document.getElementById('days');
+
+    forecast.forEach((d, idx) => {
+        const el = document.createElement('div');
+        el.className = 'day';
+        el.style.setProperty('--i', idx);
+
+        const parts = [
+            ['wd', d.weekday],
+            ['date', String(d.date).slice(5)],
+            ['icon', weatherIcon(d.desc)],
+            ['', d.desc],
+            ['', '🌡️ ' + d.temp_min + ' تا ' + d.temp_max + '°'],
+            ['', '☔ ' + d.rain_chance + '٪'],
+        ];
+        parts.forEach(([cls, text]) => {
+            const row = document.createElement('div');
+            if (cls) row.className = cls;
+            row.textContent = text;
+            el.appendChild(row);
+        });
+
+        daysEl.appendChild(el);
+    });
+
+    document.getElementById('weather-card').style.display = 'block';
+
+    if (state.forecast_note) {
+        const note = document.getElementById('note');
+        note.textContent = '⚠️ ' + state.forecast_note;
+        note.style.display = 'block';
+    }
+}
+
+// ---------- ذخیره و ارسال ----------
+function saveState() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+function setBusy(value) {
+    busy = value;
+    sendBtn.disabled = value;
+}
+
+function autoResize() {
+    inputEl.style.height = 'auto';
+    inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+}
+
+async function sendMessage() {
+    const text = inputEl.value.trim();
+    if (!text || busy) return;
+
+    setBusy(true);
+    const userBubble = addBubble('user', text);
+    inputEl.value = '';
+    autoResize();
+    scrollToBottom();
+
+    const typing = addNote('typing', 'در حال نوشتن...');
+    scrollToBottom();
+
+    try {
+        const response = await fetch('/send_message', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ history: state.history, message: text })
+        });
+        const data = await response.json().catch(() => ({}));
+        typing.remove();
+
+        if (response.ok && data.reply) {
+            state.history.push({ role: 'user', text: text }, { role: 'model', text: data.reply });
+            saveState();
+            const bubble = addBubble('model', data.reply);
+            scrollToStart(bubble);
+        } else {
+            // پیام ناموفق در تاریخچه ثبت نمی‌شود و متن به کادر برمی‌گردد تا دوباره بفرستید
+            userBubble.remove();
+            inputEl.value = text;
+            autoResize();
+            addNote('error', data.error || 'خطای ناشناخته از سرور.');
+            scrollToBottom();
+        }
+    } catch (err) {
+        typing.remove();
+        userBubble.remove();
+        inputEl.value = text;
+        autoResize();
+        addNote('error', 'خطا در ارتباط با سرور.');
+        scrollToBottom();
+    } finally {
+        setBusy(false);
+    }
+}
+
+function newPlan() {
+    if (!confirm('گفتگوی فعلی پاک می‌شود. برنامه‌ی جدید بسازید؟')) return;
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    goTo('/');
+}
+
+// رفتن به صفحه‌ی دیگر با خروج نرم (اگر کاربر «کاهش حرکت» را روشن کرده باشد، فوری می‌رود)
+function goTo(url) {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        window.location.href = url;
+        return;
+    }
+    document.body.classList.add('leaving');
+    setTimeout(function () { window.location.href = url; }, 280);
+}
+
+// اگر با دکمه‌ی برگشت مرورگر به این صفحه برگردیم، حالت خروج پاک می‌شود
+window.addEventListener('pageshow', function (e) {
+    if (e.persisted) document.body.classList.remove('leaving');
+});
+
+// ---------- شروع ----------
+inputEl.addEventListener('input', autoResize);
+inputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+document.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+        inputEl.value = chip.dataset.text;
+        autoResize();
+        inputEl.focus();
+    });
+});
+
+if (!state || !Array.isArray(state.history) || state.history.length < 2) {
+    // گفتگویی برای ادامه دادن وجود ندارد
+    window.location.replace('/');
+} else {
+    document.getElementById('top-city').textContent = state.city || '';
+    renderWeather();
+    // پیام اول تاریخچه، درخواست طولانی اولیه است و نمایش داده نمی‌شود؛ برنامه از پیام دوم شروع می‌شود
+    // پیام‌ها بعد از کارت هوا، یکی‌یکی وارد می‌شوند (تأخیر حداکثر ۰٫۹ ثانیه)
+    state.history.slice(1).forEach((m, i) => addBubble(m.role, m.text, Math.min(0.4 + i * 0.08, 0.9)));
+}
+</script>
+
+</body>
+</html>
